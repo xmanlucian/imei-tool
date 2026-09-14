@@ -139,7 +139,8 @@ func isNumeric(s string) bool {
 }
 
 func main() {
-	count := flag.Int("n", 1, "生成数量 (例如: -n 10)")
+	guiFlag := flag.Bool("gui", false, "以图形界面 (GUI) 模式启动")
+	count := flag.Int("n", 1, "生成数量 (CLI 模式)")
 	brand := flag.String("brand", "", "指定品牌 TAC (可选: apple, samsung, huawei, xiaomi, google)")
 	tac := flag.String("tac", "", "指定自定义 8 位 TAC 码 (如: -tac 35414849)")
 	validate := flag.String("check", "", "校验指定的 15 位 IMEI 是否有效 (如: -check 354148491234567)")
@@ -147,20 +148,29 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  随机 IMEI 生成与校验工具 (跨平台 CLI 版)\n\n")
+		fmt.Fprintf(os.Stderr, "  随机 IMEI 生成与校验工具 (支持 GUI 界面与 CLI 命令行)\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nExamples:\n")
-		fmt.Fprintf(os.Stderr, "  %s -n 5                     # 随机生成 5 个有效 IMEI\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -brand apple -n 3        # 生成 3 个苹果设备 TAC 的 IMEI\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -tac 35414849 -f         # 使用指定 TAC 并格式化输出\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -check 354148491234563   # 校验 IMEI 校验位是否正确\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -gui                     # 打开图形界面 (GUI)\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -n 5                     # CLI 模式: 随机生成 5 个有效 IMEI\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -brand apple -n 3        # CLI 模式: 生成 3 个苹果设备 TAC 的 IMEI\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -tac 35414849 -f         # CLI 模式: 使用指定 TAC 并格式化输出\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -check 354148491014741   # CLI 模式: 校验 IMEI 校验位是否正确\n", os.Args[0])
 	}
 
 	flag.Parse()
 
+	// 如果没有传任何命令行参数，或者显式指定了 -gui，并且是在双击/交互启动时，若无任何flag传参则可根据需求处理
+	// 为保持用户体验：如果传了 -gui，启动 GUI；或者如果没有任何参数且不是输入重定向，我们提供 -gui 选项
+	if *guiFlag || (len(os.Args) == 1) {
+		startGUI()
+		return
+	}
+
 	if *validate != "" {
-		if ValidateIMEI(*validate) {
+		clean := strings.ReplaceAll(strings.ReplaceAll(*validate, "-", ""), " ", "")
+		if ValidateIMEI(clean) {
 			fmt.Printf("✓ IMEI 有效: %s\n", *validate)
 			os.Exit(0)
 		} else {
