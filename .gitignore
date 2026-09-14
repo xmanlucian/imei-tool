@@ -1,0 +1,5 @@
+build/
+bin/
+*.exe
+imei-tool
+.DS_Store
