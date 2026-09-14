@@ -3,3 +3,5 @@ bin/
 *.exe
 imei-tool
 .DS_Store
+.wrangler/
+node_modules/
