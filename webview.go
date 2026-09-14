@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -316,21 +314,6 @@ function clearResults() {
 </body>
 </html>
 `
-
-func openBrowser(url string) {
-	var err error
-	switch runtime.GOOS {
-	case "linux":
-		err = exec.Command("xdg-open", url).Start()
-	case "windows":
-		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-	case "darwin":
-		err = exec.Command("open", url).Start()
-	}
-	if err != nil {
-		fmt.Printf("无法自动打开浏览器，请手动访问: %s\n", url)
-	}
-}
 
 func startGUI() {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")

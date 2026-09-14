@@ -55,13 +55,66 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          go build -trimpath -ldflags="-s -w" -o build/${{ matrix.binary_name }} .
+          mkdir -p dist
+          go build -trimpath -ldflags="-s -w" -o dist/${{ matrix.binary_name }} .
+          chmod +x dist/${{ matrix.binary_name }}
+
+      - name: Package macOS .app and .command
+        if: matrix.goos == 'darwin'
+        run: |
+          ARCH="${{ matrix.goarch }}"
+          APP_DIR="dist/IMEI-Tool-${ARCH}.app"
+          mkdir -p "${APP_DIR}/Contents/MacOS"
+          mkdir -p "${APP_DIR}/Contents/Resources"
+
+          # 复制主程序到 MacOS 目录
+          cp "dist/${{ matrix.binary_name }}" "${APP_DIR}/Contents/MacOS/imei-tool"
+          chmod +x "${APP_DIR}/Contents/MacOS/imei-tool"
+
+          # 生成 Info.plist
+          cat << 'PLIST_EOF' > "${APP_DIR}/Contents/Info.plist"
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>imei-tool</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.xmanlucian.imeitool</string>
+              <key>CFBundleName</key>
+              <string>IMEI Tool</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0.1</string>
+              <key>LSMinimumSystemVersion</key>
+              <string>10.13</string>
+              <key>NSHighResolutionCapable</key>
+              <true/>
+          </dict>
+          </plist>
+          PLIST_EOF
+
+          # 生成一键双击启动的脚本
+          cat << 'SH_EOF' > "dist/双击打开-IMEI-Tool-${ARCH}.command"
+          #!/bin/bash
+          DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+          cd "$DIR"
+          chmod +x "./${{ matrix.binary_name }}"
+          "./${{ matrix.binary_name }}"
+          SH_EOF
+          chmod +x "dist/双击打开-IMEI-Tool-${ARCH}.command"
+
+          # 打包成 zip 方便直接解压运行
+          cd dist
+          zip -r "imei-tool-darwin-${ARCH}-app.zip" "IMEI-Tool-${ARCH}.app" "双击打开-IMEI-Tool-${ARCH}.command"
+          cd ..
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.binary_name }}
-          path: build/${{ matrix.binary_name }}
+          name: dist-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
 
   release:
     name: Create Release
@@ -76,9 +129,15 @@ jobs:
         with:
           path: artifacts
 
+      - name: Flatten Artifacts
+        run: |
+          mkdir -p release_files
+          find artifacts/ -type f -exec cp {} release_files/ \;
+          ls -la release_files/
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: release_files/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
