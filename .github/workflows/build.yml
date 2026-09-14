@@ -55,7 +55,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          go build -trimpath -ldflags="-s -w" -o build/${{ matrix.binary_name }} main.go
+          go build -trimpath -ldflags="-s -w" -o build/${{ matrix.binary_name }} .
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
